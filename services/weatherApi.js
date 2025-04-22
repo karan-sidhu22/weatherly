@@ -1,25 +1,44 @@
 const API_KEY = process.env.NEXT_PUBLIC_WEATHER_API_KEY;
 
 export async function getWeatherByCity(city) {
-  if (!city) return null;
+  if (!city || typeof city !== "string" || city.trim() === "") {
+    return { error: "Please enter a city name" };
+  }
+
+  const trimmedCity = city.trim();
 
   try {
-    console.log("API_KEY:", API_KEY); // ✅ Add this line to debug
+    const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
+      trimmedCity
+    )}&appid=${API_KEY}&units=metric`;
+    const response = await fetch(url);
 
-    const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`;
-    console.log("Request URL:", url); // Optional: to verify full URL
+    if (!response.ok) {
+      // Try to get more specific error from API
+      let errorMessage = `"${trimmedCity}" not found. Please check the spelling.`;
+      try {
+        const errorData = await response.json();
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } catch (e) {
+        console.error("Error parsing error response:", e);
+      }
 
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (!res.ok) {
-      console.error("Error from API:", data);
-      throw new Error(data?.message || "Something went wrong");
+      return {
+        error: errorMessage,
+        city: trimmedCity,
+      };
     }
 
-    return data;
+    const data = await response.json();
+    return { data };
   } catch (error) {
-    console.error("Fetch error:", error.message);
-    throw error;
+    console.error("API request failed:", error);
+    return {
+      error: error.message.includes("Failed to fetch")
+        ? "Network error. Please check your internet connection."
+        : "Unable to fetch weather data. Please try again later.",
+    };
   }
 }
