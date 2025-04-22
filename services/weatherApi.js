@@ -14,19 +14,14 @@ export async function getWeatherByCity(city) {
     const response = await fetch(url);
 
     if (!response.ok) {
-      // Try to get more specific error from API
-      let errorMessage = `"${trimmedCity}" not found. Please check the spelling.`;
+      let errorData;
       try {
-        const errorData = await response.json();
-        if (errorData.message) {
-          errorMessage = errorData.message;
-        }
+        errorData = await response.json();
       } catch (e) {
-        console.error("Error parsing error response:", e);
+        errorData = {};
       }
-
       return {
-        error: errorMessage,
+        error: `"${trimmedCity}" not found. Please check the spelling.`,
         city: trimmedCity,
       };
     }
@@ -34,11 +29,37 @@ export async function getWeatherByCity(city) {
     const data = await response.json();
     return { data };
   } catch (error) {
-    console.error("API request failed:", error);
     return {
-      error: error.message.includes("Failed to fetch")
-        ? "Network error. Please check your internet connection."
-        : "Unable to fetch weather data. Please try again later.",
+      error: "Unable to fetch weather data. Please try again later.",
+    };
+  }
+}
+
+export async function getFiveDayForecast(city) {
+  if (!city || typeof city !== "string" || city.trim() === "") {
+    return { error: "Please enter a city name" };
+  }
+
+  const trimmedCity = city.trim();
+
+  try {
+    const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(
+      trimmedCity
+    )}&appid=${API_KEY}&units=metric`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      return {
+        error: `"${trimmedCity}" not found. Please check the spelling.`,
+        city: trimmedCity,
+      };
+    }
+
+    const data = await response.json();
+    return { data };
+  } catch (error) {
+    return {
+      error: "Unable to fetch forecast. Please try again later.",
     };
   }
 }
